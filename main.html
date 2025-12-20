@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lyrics Player (Black BG + Album Art Logic)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: transparent;
+    color: white;
+    font-family: "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+
+  /* ===== 전체 구조 ===== */
+  #container {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* 배경용 블러 처리된 앨범아트 */
+  #bgArt {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) brightness(0.35);
+    transform: scale(1.04);
+    z-index: 0;
+    display: none;
+  }
+
+  /* ===== 비디오/이미지 영역 ===== */
+  #video-area {
+    flex: 0 0 55%;
+    background: rgba(0, 0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  video, #albumArtLarge {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: transparent;
+  }
+
+  #albumArtLarge {
+    display: none;
+    border-radius: 0;
+  }
+
+  /* ===== 가사 영역 ===== */
+  #lyrics-area {
+    flex: 1;
+    background: rgba(0,0,0,0.25);
+    padding: 60px 40px 80px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  #lyrics-area::-webkit-scrollbar {
+    width: 8px;
+  }
+  #lyrics-area::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 4px;
+  }
+
+  .line {
+    opacity: 0.4;
+    font-size: 1.2em;
+    margin: 12px 0;
+    text-align: center;
+    transition: opacity 0.6s ease, font-size 0.4s ease;
+    color: rgba(255,255,255,0.95);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    cursor: pointer;
+  }
+
+  .active {
+    opacity: 1;
+    font-size: 1.9em;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 25px rgba(255,255,255,0.8);
+  }
+
+  /* ===== 오른쪽 위 작은 앨범아트 ===== */
+  #albumArt {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 100px;
+    height: 100px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+    object-fit: cover;
+    display: none;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  #albumPopup {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+  }
+  #albumPopup img {
+    max-width: 80%;
+    max-height: 80%;
+    border-radius: 16px;
+  }
+
+  /* ===== 오디오 컨트롤 ===== */
+  #controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 55%;
+    background: transparent;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    z-index: 5;
+  }
+
+  audio {
+    width: 90%;
+    max-width: 700px;
+  }
+
+  /* ===== 파일 선택 ===== */
+  #songInput {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    background: white;
+    color: black;
+    padding: 18px 26px;
+    border-radius: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 40;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    transition: top 600ms ease, left 600ms ease, transform 600ms ease, padding 600ms ease, border-radius 600ms ease, width 600ms ease, height 600ms ease, box-shadow 600ms ease;
+  }
+
+  /* compact: move to top-left and shrink */
+  #songInput.compact {
+    top: 15px;
+    left: 15px;
+    transform: translate(0, 0) scale(1);
+    padding: 6px 10px;
+    border-radius: 6px;
+    width: auto;
+    box-shadow: none;
+    z-index: 50;
+  }
+
+  /* hide primary UI until selection */
+  body:not(.show-ui) #container,
+  body:not(.show-ui) #albumArt,
+  body:not(.show-ui) #controls,
+  body:not(.show-ui) #bgArt,
+  body:not(.show-ui) #albumPopup {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px) scale(0.995);
+    transition: opacity 600ms ease, transform 600ms ease;
+  }
+
+  body.show-ui #container,
+  body.show-ui #albumArt,
+  body.show-ui #controls,
+  body.show-ui #bgArt,
+  body.show-ui #albumPopup {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+  }
+
+  /* ===== GitHub side button ===== */
+  #githubBtn {
+    position: fixed;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.06);
+    color: white;
+    border-radius: 10px;
+    z-index: 35;
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity 600ms ease, transform 200ms ease, background 160ms ease;
+  }
+  body.show-ui #githubBtn { opacity: 1; }
+  #githubBtn:hover { background: rgba(255,255,255,0.12); transform: translateY(-50%) scale(1.06); }
+  #githubBtn svg { width: 22px; height: 22px; display: block; }
+</style>
+</head>
+<body>
+  <input type="file" id="songInput" accept=".song">
+  <img id="albumArt" />
+  <div id="albumPopup"><img /></div>
+  <div id="bgArt"></div>
+  <a id="githubBtn" href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
+      <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 018 4.58c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+    </svg>
+  </a>
+
+  <div id="container">
+    <div id="video-area">
+      <video id="video" controls preload="metadata"></video>
+      <img id="albumArtLarge" />
+    </div>
+    <div id="lyrics-area"></div>
+  </div>
+
+  <div id="controls">
+    <audio id="audio" controls style="display:none"></audio>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    let lrcData = [];
+    let currentIndex = -1;
+
+    const lyricsArea = document.getElementById("lyrics-area");
+    const audioEl = document.getElementById("audio");
+    const videoEl = document.getElementById("video");
+    const albumArtEl = document.getElementById("albumArt");
+    const albumArtLarge = document.getElementById("albumArtLarge");
+    const albumPopup = document.getElementById("albumPopup");
+    const songInput = document.getElementById("songInput");
+    const bgArt = document.getElementById("bgArt");
+
+    function parseLRC(text) {
+      const lines = text.split(/\r?\n/);
+      const result = [];
+      const timeExp = /\[(\d+):(\d+(?:\.\d+)?)\]/;
+      for (const line of lines) {
+        const match = line.match(timeExp);
+        if (match) {
+          const min = parseInt(match[1], 10);
+          const sec = parseFloat(match[2]);
+          const time = min * 60 + sec;
+          const textPart = line.replace(timeExp, "").trim();
+          result.push({ time, text: textPart });
+        }
+      }
+      return result;
+    }
+
+    function addIntroOutro(data, threshold = 5) {
+      const augmented = [];
+      if (data.length === 0) return augmented;
+      if (data[0].time > threshold)
+        augmented.push({ time: 0, text: "🎵 Instrumental..." });
+      augmented.push(...data);
+      return augmented;
+    }
+
+    songInput.addEventListener("change", async (e) => {
+      // start UI animation: compact the file picker and reveal the main UI
+      songInput.classList.add('compact');
+      document.body.classList.add('show-ui');
+
+      const file = e.target.files[0];
+      if (!file) return;
+      const zip = await JSZip.loadAsync(file);
+      let isVideo = false, mediaBlob = null;
+      let albumUrl = null;
+
+      for (const name of Object.keys(zip.files)) {
+        if (name.endsWith(".lrc")) {
+          const text = await zip.files[name].async("string");
+          lrcData = addIntroOutro(parseLRC(text));
+        } else if (name.endsWith(".mp3")) {
+          const data = await zip.files[name].async("blob");
+          mediaBlob = new Blob([data], { type: "audio/mpeg" });
+          isVideo = false;
+        } else if (name.endsWith(".mp4")) {
+          const data = await zip.files[name].async("blob");
+          mediaBlob = new Blob([data], { type: "video/mp4" });
+          isVideo = true;
+        } else if (name.match(/cover.*\.(jpg|png)$/i)) {
+          const data = await zip.files[name].async("blob");
+          albumUrl = URL.createObjectURL(data);
+        }
+      }
+
+      if (albumUrl) {
+        albumArtEl.src = albumUrl;
+        albumArtEl.style.display = "block";
+        albumArtEl.onclick = () => {
+          albumPopup.style.display = "flex";
+          albumPopup.querySelector("img").src = albumUrl;
+        };
+        albumPopup.onclick = () => (albumPopup.style.display = "none");
+        albumArtLarge.src = albumUrl;
+        if (bgArt) {
+          bgArt.style.backgroundImage = `url(${albumUrl})`;
+          bgArt.style.display = 'block';
+        }
+      }
+
+      if (mediaBlob) {
+        if (isVideo) {
+          videoEl.src = URL.createObjectURL(mediaBlob);
+          videoEl.style.display = "block";
+          audioEl.style.display = "none";
+          albumArtLarge.style.display = "none";
+        } else {
+          audioEl.src = URL.createObjectURL(mediaBlob);
+          audioEl.style.display = "block";
+          videoEl.style.display = "none";
+          if (albumUrl) {
+            albumArtLarge.style.display = "block";
+          } else {
+            albumArtLarge.style.display = "none";
+          }
+        }
+      }
+
+      // hide bg if no album art
+      if (!albumUrl && bgArt) bgArt.style.display = 'none';
+
+      renderLyrics();
+      setupSync(isVideo ? videoEl : audioEl);
+    });
+
+    function renderLyrics() {
+      lyricsArea.innerHTML = "";
+      lrcData.forEach((line) => {
+        const div = document.createElement("div");
+        div.className = "line";
+        div.textContent = line.text || " ";
+        div.onclick = () => {
+          const player = videoEl.style.display === "block" ? videoEl : audioEl;
+          player.currentTime = line.time;
+          player.play();
+        };
+        lyricsArea.appendChild(div);
+      });
+    }
+
+    function setupSync(player) {
+      const lines = Array.from(document.querySelectorAll(".line"));
+      player.ontimeupdate = () => {
+        const t = player.currentTime;
+        let idx = 0;
+        for (let i = lrcData.length - 1; i >= 0; i--) {
+          if (t >= lrcData[i].time) { idx = i; break; }
+        }
+        if (idx !== currentIndex) {
+          currentIndex = idx;
+          lines.forEach((l, i) => l.classList.toggle("active", i === idx));
+
+          const activeLine = lines[idx];
+          if (activeLine) {
+            const offsetTop = activeLine.offsetTop - lyricsArea.clientHeight / 2 + activeLine.clientHeight / 2;
+            lyricsArea.scrollTo({ top: offsetTop, behavior: "smooth" });
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>
