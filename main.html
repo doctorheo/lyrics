@@ -214,6 +214,25 @@
   body.show-ui #githubBtn { opacity: 1; }
   #githubBtn:hover { background: rgba(255,255,255,0.12); transform: translateY(-50%) scale(1.06); }
   #githubBtn svg { width: 22px; height: 22px; display: block; }
+  /* credit / 출처 박스 */
+  #credit {
+    position: fixed;
+    right: 15px;
+    bottom: 15px;
+    background: rgba(0,0,0,0.5);
+    color: rgba(255,255,255,0.95);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.3;
+    max-width: 320px;
+    z-index: 45;
+    display: none;
+    white-space: pre-wrap;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    transition: opacity 400ms ease, transform 400ms ease;
+  }
+  #credit.visible { display: block; opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
@@ -221,11 +240,12 @@
   <img id="albumArt" />
   <div id="albumPopup"><img /></div>
   <div id="bgArt"></div>
-  <a id="githubBtn" href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
+  <a id="githubBtn" href="https://github.com/doctorheo/lyrics" target="_blank" rel="noopener" title="GitHub">
     <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
       <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 018 4.58c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path>
     </svg>
   </a>
+  <div id="credit" aria-hidden="true"></div>
 
   <div id="container">
     <div id="video-area">
@@ -252,6 +272,7 @@
     const albumPopup = document.getElementById("albumPopup");
     const songInput = document.getElementById("songInput");
     const bgArt = document.getElementById("bgArt");
+    const creditEl = document.getElementById("credit");
 
     function parseLRC(text) {
       const lines = text.split(/\r?\n/);
@@ -289,6 +310,7 @@
       const zip = await JSZip.loadAsync(file);
       let isVideo = false, mediaBlob = null;
       let albumUrl = null;
+      let creditText = null;
 
       for (const name of Object.keys(zip.files)) {
         if (name.endsWith(".lrc")) {
@@ -305,6 +327,9 @@
         } else if (name.match(/cover.*\.(jpg|png)$/i)) {
           const data = await zip.files[name].async("blob");
           albumUrl = URL.createObjectURL(data);
+        } else if (name.match(/(^|\/)crd\.txt$/i)) {
+          const text = await zip.files[name].async("string");
+          creditText = text;
         }
       }
 
@@ -321,6 +346,17 @@
           bgArt.style.backgroundImage = `url(${albumUrl})`;
           bgArt.style.display = 'block';
         }
+      }
+
+      // show credit if present
+      if (creditText && creditEl) {
+        creditEl.textContent = creditText.trim();
+        creditEl.classList.add('visible');
+        creditEl.setAttribute('aria-hidden','false');
+      } else if (creditEl) {
+        creditEl.classList.remove('visible');
+        creditEl.setAttribute('aria-hidden','true');
+        creditEl.style.display = 'none';
       }
 
       if (mediaBlob) {
