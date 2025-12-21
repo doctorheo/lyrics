@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>404 - 페이지를 찾을 수 없음</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;500;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  font-family: 'Pretendard', sans-serif;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.card {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 50px 40px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  max-width: 420px;
+  width: 90%;
+}
+
+.code {
+  font-size: 96px;
+  font-weight: 700;
+  margin: 0;
+  animation: shake 2s infinite;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.desc {
+  font-size: 15px;
+  opacity: 0.85;
+  margin: 20px 0 35px;
+  line-height: 1.6;
+}
+
+.btn {
+  display: inline-block;
+  padding: 14px 28px;
+  border-radius: 30px;
+  background: #fff;
+  color: #764ba2;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+}
+
+@keyframes shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
+</style>
+</head>
+
+<body>
+  <div class="card">
+    <h1 class="code">오류</h1>
+    <div class="title">파일이 손상되었습니다 😢</div>
+    <div class="desc">
+      요청한 파일이 존재하지 않거나<br>
+      이동 또는 삭제, 손상을 입었을 수 있습니다.<br>
+      올바른 경로를 확인하시고 다시 시도해주세요.
+    </div>
+    <button id="showDetailsBtn" class="btn" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.12);margin-right:12px;">오류 자세히 보기</button>
+    <a id="homeBtn" href="main.html" class="btn">홈으로 돌아가기</a>
+
+    <pre id="err-details" style="display:none;margin-top:18px;text-align:left;background: rgba(0,0,0,0.12);padding:14px;border-radius:10px;white-space:pre-wrap;overflow:auto;max-height:220px;color:#fff;">
+    </pre>
+  </div>
+  <script>
+    (function(){
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const msg = params.get('msg');
+      const file = params.get('file');
+
+      const detailsEl = document.getElementById('err-details');
+      const btn = document.getElementById('showDetailsBtn');
+      const titleEl = document.querySelector('.title');
+      const descEl = document.querySelector('.desc');
+
+      if (!code && !msg && !file) {
+        btn.style.display = 'none';
+        return;
+      }
+
+      // iframe으로 호출되었는지 확인하면 홈 버튼 숨김
+      const isIframeCall = params.get('isifr') === 'true';
+      const homeBtn = document.getElementById('homeBtn');
+      if (isIframeCall && homeBtn) {
+        homeBtn.style.display = 'none';
+      }
+
+      // 안전하게 텍스트로 표시
+      const parts = [];
+      if (msg) parts.push('메시지: ' + msg);
+      if (file) parts.push('파일: ' + file);
+      if (code) parts.push('코드: ' + code);
+
+      detailsEl.textContent = parts.join('\n');
+
+      // 버튼 토글
+      btn.addEventListener('click', function(){
+        if (detailsEl.style.display === 'none' || !detailsEl.style.display) {
+          detailsEl.style.display = 'block';
+          btn.textContent = '간단히';
+        } else {
+          detailsEl.style.display = 'none';
+          btn.textContent = '오류 자세히';
+        }
+      });
+
+      // 조금 더 상세한 제목/문구
+      if (code) titleEl.textContent = '오류: ' + code;
+      if (msg) descEl.textContent = '파일이 손상되었습니다 😢 "오류 자세히 보기"를 눌러 원인 정보를 확인하세요.';
+    })();
+  </script>
+</body>
+</html>

@@ -233,10 +233,50 @@
     transition: opacity 400ms ease, transform 400ms ease;
   }
   #credit.visible { display: block; opacity: 1; transform: translateY(0); }
+
+  /* ===== error iframe overlay ===== */
+  #errorOverlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    padding: 20px;
+  }
+  #errorContainer {
+    width: 100%;
+    max-width: 720px;
+    height: 70%;
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    position: relative;
+  }
+  #errorFrame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+  }
+  .err-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
-  <input type="file" id="songInput" accept=".song">
+  <input type="file" id="songInput" accept=".music,.song,.zip">
   <img id="albumArt" />
   <div id="albumPopup"><img /></div>
   <div id="bgArt"></div>
@@ -257,6 +297,14 @@
 
   <div id="controls">
     <audio id="audio" controls style="display:none"></audio>
+  </div>
+
+  <!-- Error overlay iframe -->
+  <div id="errorOverlay">
+    <div id="errorContainer">
+      <button class="err-close" id="errCloseBtn">닫기</button>
+      <iframe id="errorFrame" title="오류" sandbox="allow-same-origin allow-scripts"></iframe>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -301,13 +349,41 @@
     }
 
     songInput.addEventListener("change", async (e) => {
-      // start UI animation: compact the file picker and reveal the main UI
-      songInput.classList.add('compact');
-      document.body.classList.add('show-ui');
-
       const file = e.target.files[0];
       if (!file) return;
-      const zip = await JSZip.loadAsync(file);
+
+      function redirectToError(code, message, fileName) {
+        const params = new URLSearchParams({ code: code || '', msg: message || '', file: fileName || '' });
+        const overlay = document.getElementById('errorOverlay');
+        const frame = document.getElementById('errorFrame');
+        const closeBtn = document.getElementById('errCloseBtn');
+        if (frame && overlay) {
+          // indicate iframe usage so error page can adapt
+          params.append('isifr', 'true');
+          frame.src = 'error.html?' + params.toString();
+          overlay.style.display = 'flex';
+          // attach close handler
+          if (closeBtn) closeBtn.onclick = () => {
+            frame.src = 'about:blank';
+            overlay.style.display = 'none';
+          };
+        } else {
+          // fallback to full redirect
+          window.location.href = 'error.html?' + params.toString();
+        }
+      }
+
+      let zip;
+      try {
+        zip = await JSZip.loadAsync(file);
+      } catch (err) {
+        redirectToError('zip_read_error', '압축을 읽을 수 없습니다: ' + (err && err.message ? err.message : err), file.name);
+        return;
+      }
+      if (!zip || Object.keys(zip.files).length === 0) {
+        redirectToError('empty_zip', '압축 내부에 파일이 없습니다.', file.name);
+        return;
+      }
       let isVideo = false, mediaBlob = null;
       let albumUrl = null;
       let creditText = null;
@@ -359,6 +435,15 @@
         creditEl.style.display = 'none';
       }
 
+      if (!mediaBlob) {
+        redirectToError('no_media', '미디어 파일(mp3 또는 mp4)을 찾을 수 없습니다.', file.name);
+        return;
+      }
+
+      // 성공적으로 미디어를 찾았으므로 UI 모션을 실행
+      songInput.classList.add('compact');
+      document.body.classList.add('show-ui');
+
       if (mediaBlob) {
         if (isVideo) {
           videoEl.src = URL.createObjectURL(mediaBlob);
@@ -386,17 +471,33 @@
 
     function renderLyrics() {
       lyricsArea.innerHTML = "";
-      lrcData.forEach((line) => {
-        const div = document.createElement("div");
-        div.className = "line";
-        div.textContent = line.text || " ";
-        div.onclick = () => {
-          const player = videoEl.style.display === "block" ? videoEl : audioEl;
-          player.currentTime = line.time;
-          player.play();
-        };
-        lyricsArea.appendChild(div);
-      });
+      if (!lrcData || lrcData.length === 0) {
+        // 가사가 없으면 가사 영역 숨기고 비디오/앨범아트를 가운데로 배치
+        lyricsArea.style.display = 'none';
+        const videoArea = document.getElementById('video-area');
+        if (videoArea) videoArea.style.flex = '1';
+        const controls = document.getElementById('controls');
+        if (controls) controls.style.width = '100%';
+      } else {
+        // 가사가 있으면 원래 레이아웃으로 복구
+        lyricsArea.style.display = '';
+        const videoArea = document.getElementById('video-area');
+        if (videoArea) videoArea.style.flex = '0 0 55%';
+        const controls = document.getElementById('controls');
+        if (controls) controls.style.width = '55%';
+
+        lrcData.forEach((line) => {
+          const div = document.createElement("div");
+          div.className = "line";
+          div.textContent = line.text || " ";
+          div.onclick = () => {
+            const player = videoEl.style.display === "block" ? videoEl : audioEl;
+            player.currentTime = line.time;
+            player.play();
+          };
+          lyricsArea.appendChild(div);
+        });
+      }
     }
 
     function setupSync(player) {
@@ -417,6 +518,11 @@
             lyricsArea.scrollTo({ top: offsetTop, behavior: "smooth" });
           }
         }
+      };
+      // When the track ends, clear any active lyric highlight
+      player.onended = () => {
+        currentIndex = -1;
+        lines.forEach((l) => l.classList.remove('active'));
       };
     }
   </script>
