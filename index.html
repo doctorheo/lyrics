@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>Lyrics Player (Black BG + Album Art Logic)</title>
+<title>Lyrics Player & MP4 Generator</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -123,7 +123,7 @@
     border-radius: 16px;
   }
 
-  /* ===== 오디오 컨트롤 ===== */
+  /* ===== 오디오 및 컨트롤 버튼 ===== */
   #controls {
     position: fixed;
     bottom: 0;
@@ -132,14 +132,30 @@
     background: transparent;
     padding: 10px;
     display: flex;
+    align-items: center;
     justify-content: center;
+    gap: 12px;
     z-index: 5;
   }
 
   audio {
-    width: 90%;
-    max-width: 700px;
+    width: 70%;
+    max-width: 500px;
   }
+
+  #exportBtn {
+    display: none;
+    padding: 8px 16px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #exportBtn:hover { background: #218838; }
+  #exportBtn:disabled { background: #6c757d; cursor: not-allowed; }
 
   /* ===== 파일 선택 ===== */
   #songInput {
@@ -158,7 +174,6 @@
     transition: top 600ms ease, left 600ms ease, transform 600ms ease, padding 600ms ease, border-radius 600ms ease, width 600ms ease, height 600ms ease, box-shadow 600ms ease;
   }
 
-  /* compact: move to top-left and shrink */
   #songInput.compact {
     top: 15px;
     left: 15px;
@@ -170,7 +185,7 @@
     z-index: 50;
   }
 
-  /* hide primary UI until selection */
+  /* UI 활성화 조절 */
   body:not(.show-ui) #container,
   body:not(.show-ui) #albumArt,
   body:not(.show-ui) #controls,
@@ -192,7 +207,7 @@
     transform: translateY(0) scale(1);
   }
 
-  /* ===== GitHub side button ===== */
+  /* ===== GitHub 버튼 및 출처 ===== */
   #githubBtn {
     position: fixed;
     right: 15px;
@@ -214,7 +229,7 @@
   body.show-ui #githubBtn { opacity: 1; }
   #githubBtn:hover { background: rgba(255,255,255,0.12); transform: translateY(-50%) scale(1.06); }
   #githubBtn svg { width: 22px; height: 22px; display: block; }
-  /* credit / 출처 박스 */
+
   #credit {
     position: fixed;
     right: 15px;
@@ -234,7 +249,7 @@
   }
   #credit.visible { display: block; opacity: 1; transform: translateY(0); }
 
-  /* ===== error iframe overlay ===== */
+  /* ===== 에러 오버레이 ===== */
   #errorOverlay {
     position: fixed;
     inset: 0;
@@ -249,10 +264,9 @@
     width: 100%;
     max-width: 720px;
     height: 70%;
-    background: rgba(255,255,255,0.03);
+    background: transparent;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
     position: relative;
   }
   #errorFrame {
@@ -280,6 +294,7 @@
   <img id="albumArt" />
   <div id="albumPopup"><img /></div>
   <div id="bgArt"></div>
+
   <a id="githubBtn" href="https://github.com/doctorheo/lyrics" target="_blank" rel="noopener" title="GitHub">
     <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
       <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 018 4.58c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path>
@@ -297,9 +312,10 @@
 
   <div id="controls">
     <audio id="audio" controls style="display:none"></audio>
+    <button id="exportBtn">⚡ 초고속 MP4 변환</button>
   </div>
 
-  <!-- Error overlay iframe -->
+  <!-- 에러 창 -->
   <div id="errorOverlay">
     <div id="errorContainer">
       <button class="err-close" id="errCloseBtn">닫기</button>
@@ -321,6 +337,7 @@
     const songInput = document.getElementById("songInput");
     const bgArt = document.getElementById("bgArt");
     const creditEl = document.getElementById("credit");
+    const exportBtn = document.getElementById("exportBtn");
 
     function parseLRC(text) {
       const lines = text.split(/\r?\n/);
@@ -348,30 +365,27 @@
       return augmented;
     }
 
+    function redirectToError(code, message, fileName) {
+      const params = new URLSearchParams({ code: code || '', msg: message || '', file: fileName || '' });
+      const overlay = document.getElementById('errorOverlay');
+      const frame = document.getElementById('errorFrame');
+      const closeBtn = document.getElementById('errCloseBtn');
+      if (frame && overlay) {
+        params.append('isifr', 'true');
+        frame.src = 'error.html?' + params.toString();
+        overlay.style.display = 'flex';
+        if (closeBtn) closeBtn.onclick = () => {
+          frame.src = 'about:blank';
+          overlay.style.display = 'none';
+        };
+      } else {
+        window.location.href = 'error.html?' + params.toString();
+      }
+    }
+
     songInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-
-      function redirectToError(code, message, fileName) {
-        const params = new URLSearchParams({ code: code || '', msg: message || '', file: fileName || '' });
-        const overlay = document.getElementById('errorOverlay');
-        const frame = document.getElementById('errorFrame');
-        const closeBtn = document.getElementById('errCloseBtn');
-        if (frame && overlay) {
-          // indicate iframe usage so error page can adapt
-          params.append('isifr', 'true');
-          frame.src = 'error.html?' + params.toString();
-          overlay.style.display = 'flex';
-          // attach close handler
-          if (closeBtn) closeBtn.onclick = () => {
-            frame.src = 'about:blank';
-            overlay.style.display = 'none';
-          };
-        } else {
-          // fallback to full redirect
-          window.location.href = 'error.html?' + params.toString();
-        }
-      }
 
       let zip;
       try {
@@ -384,9 +398,8 @@
         redirectToError('empty_zip', '압축 내부에 파일이 없습니다.', file.name);
         return;
       }
-      let isVideo = false, mediaBlob = null;
-      let albumUrl = null;
-      let creditText = null;
+
+      let isVideo = false, mediaBlob = null, albumUrl = null, creditText = null;
 
       for (const name of Object.keys(zip.files)) {
         if (name.endsWith(".lrc")) {
@@ -424,7 +437,6 @@
         }
       }
 
-      // show credit if present
       if (creditText && creditEl) {
         creditEl.textContent = creditText.trim();
         creditEl.classList.add('visible');
@@ -440,29 +452,23 @@
         return;
       }
 
-      // 성공적으로 미디어를 찾았으므로 UI 모션을 실행
       songInput.classList.add('compact');
       document.body.classList.add('show-ui');
 
-      if (mediaBlob) {
-        if (isVideo) {
-          videoEl.src = URL.createObjectURL(mediaBlob);
-          videoEl.style.display = "block";
-          audioEl.style.display = "none";
-          albumArtLarge.style.display = "none";
-        } else {
-          audioEl.src = URL.createObjectURL(mediaBlob);
-          audioEl.style.display = "block";
-          videoEl.style.display = "none";
-          if (albumUrl) {
-            albumArtLarge.style.display = "block";
-          } else {
-            albumArtLarge.style.display = "none";
-          }
-        }
+      if (isVideo) {
+        videoEl.src = URL.createObjectURL(mediaBlob);
+        videoEl.style.display = "block";
+        audioEl.style.display = "none";
+        albumArtLarge.style.display = "none";
+        exportBtn.style.display = "none";
+      } else {
+        audioEl.src = URL.createObjectURL(mediaBlob);
+        audioEl.style.display = "block";
+        videoEl.style.display = "none";
+        albumArtLarge.style.display = albumUrl ? "block" : "none";
+        exportBtn.style.display = "block";
       }
 
-      // hide bg if no album art
       if (!albumUrl && bgArt) bgArt.style.display = 'none';
 
       renderLyrics();
@@ -472,14 +478,12 @@
     function renderLyrics() {
       lyricsArea.innerHTML = "";
       if (!lrcData || lrcData.length === 0) {
-        // 가사가 없으면 가사 영역 숨기고 비디오/앨범아트를 가운데로 배치
         lyricsArea.style.display = 'none';
         const videoArea = document.getElementById('video-area');
         if (videoArea) videoArea.style.flex = '1';
         const controls = document.getElementById('controls');
         if (controls) controls.style.width = '100%';
       } else {
-        // 가사가 있으면 원래 레이아웃으로 복구
         lyricsArea.style.display = '';
         const videoArea = document.getElementById('video-area');
         if (videoArea) videoArea.style.flex = '0 0 55%';
@@ -519,12 +523,48 @@
           }
         }
       };
-      // When the track ends, clear any active lyric highlight
       player.onended = () => {
         currentIndex = -1;
         lines.forEach((l) => l.classList.remove('active'));
       };
     }
+
+    /* ===== FastAPI 서버를 통한 초고속 MP4 변환 ===== */
+    exportBtn.addEventListener("click", async () => {
+      const file = songInput.files[0];
+      if (!file) return;
+
+      exportBtn.disabled = true;
+      exportBtn.textContent = "⚡ 서버에서 변환 중...";
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch("http://localhost:8000/convert", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("변환 서버 처리 실패");
+        }
+
+        const blob = await response.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `${file.name.replace(/\.[^/.]+$/, "")}.mp4`;
+        a.click();
+      } catch (err) {
+        alert("MP4 변환 서버와 통신 중 오류가 발생했습니다. (FastAPI 서버가 켜져 있는지 확인해 줘!)");
+        console.error(err);
+      } finally {
+        exportBtn.disabled = false;
+        exportBtn.textContent = "⚡ 초고속 MP4 변환";
+      }
+    });
   </script>
 </body>
 </html>
