@@ -22,7 +22,6 @@
     z-index: 1;
   }
 
-  /* 배경용 블러 처리된 앨범아트 */
   #bgArt {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -65,9 +64,7 @@
     scroll-behavior: smooth;
   }
 
-  #lyrics-area::-webkit-scrollbar {
-    width: 8px;
-  }
+  #lyrics-area::-webkit-scrollbar { width: 8px; }
   #lyrics-area::-webkit-scrollbar-thumb {
     background: rgba(255,255,255,0.3);
     border-radius: 4px;
@@ -123,7 +120,7 @@
     border-radius: 16px;
   }
 
-  /* ===== 오디오 및 컨트롤 버튼 ===== */
+  /* ===== 오디오 컨트롤 ===== */
   #controls {
     position: fixed;
     bottom: 0;
@@ -138,24 +135,7 @@
     z-index: 5;
   }
 
-  audio {
-    width: 70%;
-    max-width: 500px;
-  }
-
-  #exportBtn {
-    display: none;
-    padding: 8px 16px;
-    background: #28a745;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  #exportBtn:hover { background: #218838; }
-  #exportBtn:disabled { background: #6c757d; cursor: not-allowed; }
+  audio { width: 70%; max-width: 500px; }
 
   /* ===== 파일 선택 ===== */
   #songInput {
@@ -171,7 +151,7 @@
     cursor: pointer;
     z-index: 40;
     box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    transition: top 600ms ease, left 600ms ease, transform 600ms ease, padding 600ms ease, border-radius 600ms ease, width 600ms ease, height 600ms ease, box-shadow 600ms ease;
+    transition: all 600ms ease;
   }
 
   #songInput.compact {
@@ -185,7 +165,6 @@
     z-index: 50;
   }
 
-  /* UI 활성화 조절 */
   body:not(.show-ui) #container,
   body:not(.show-ui) #albumArt,
   body:not(.show-ui) #controls,
@@ -207,8 +186,8 @@
     transform: translateY(0) scale(1);
   }
 
-  /* ===== GitHub 버튼 및 출처 ===== */
-  #githubBtn {
+  /* ===== 우측 슬라이드 툴바 및 토글 화살표 버튼 ===== */
+  #toolbarToggleBtn {
     position: fixed;
     right: 15px;
     top: 50%;
@@ -218,17 +197,66 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.1);
     color: white;
     border-radius: 10px;
-    z-index: 35;
-    text-decoration: none;
-    opacity: 0;
-    transition: opacity 600ms ease, transform 200ms ease, background 160ms ease;
+    z-index: 120;
+    cursor: pointer;
+    transition: background 0.2s, right 0.3s ease, transform 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.15);
   }
-  body.show-ui #githubBtn { opacity: 1; }
-  #githubBtn:hover { background: rgba(255,255,255,0.12); transform: translateY(-50%) scale(1.06); }
-  #githubBtn svg { width: 22px; height: 22px; display: block; }
+  #toolbarToggleBtn:hover { background: rgba(255,255,255,0.2); }
+  #toolbarToggleBtn.open {
+    right: 225px;
+    transform: translateY(-50%) rotate(180deg);
+  }
+
+  #sideToolbar {
+    position: fixed;
+    top: 0;
+    right: -260px;
+    width: 250px;
+    height: 100%;
+    background: #161b22;
+    border-left: 1px solid #30363d;
+    z-index: 110;
+    padding: 80px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: right 0.3s ease;
+    box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+  }
+  #sideToolbar.open { right: 0; }
+
+  .toolbar-btn {
+    width: 100%;
+    padding: 12px;
+    background: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    text-decoration: none;
+  }
+  .toolbar-btn:hover {
+    background: #30363d;
+    color: white;
+    border-color: #8b949e;
+  }
+  .toolbar-btn.primary {
+    background: #238636;
+    color: white;
+    border: none;
+  }
+  .toolbar-btn.primary:hover { background: #2ea043; }
 
   #credit {
     position: fixed;
@@ -249,44 +277,135 @@
   }
   #credit.visible { display: block; opacity: 1; transform: translateY(0); }
 
-  /* ===== 에러 오버레이 ===== */
-  #errorOverlay {
+  /* ===== 모달 백드롭 및 카드 ===== */
+  .modal-backdrop {
     position: fixed;
     inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(6px);
     display: none;
     align-items: center;
     justify-content: center;
-    background: rgba(0,0,0,0.6);
-    z-index: 100;
-    padding: 20px;
+    z-index: 1000;
   }
-  #errorContainer {
+
+  .modal-card {
+    width: 90%;
+    max-width: 500px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 16px;
+    color: #f0f6fc;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 13px;
+    color: #8b949e;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .form-control {
     width: 100%;
-    max-width: 720px;
-    height: 70%;
-    background: transparent;
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: white;
+    padding: 10px;
+    font-size: 13px;
+    font-family: inherit;
   }
-  #errorFrame {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    background: transparent;
+
+  textarea.form-control {
+    height: 160px;
+    resize: vertical;
   }
-  .err-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 5;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    border: 0;
-    padding: 8px 10px;
+
+  .radio-group { display: flex; gap: 12px; }
+  .radio-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    padding: 12px;
     border-radius: 8px;
     cursor: pointer;
+    font-size: 14px;
   }
+  .radio-option input[type="radio"] { accent-color: #238636; }
+
+  .switch-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #21262d;
+    border: 1px solid #30363d;
+    padding: 12px 16px;
+    border-radius: 8px;
+  }
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background-color: #30363d; transition: .3s; border-radius: 24px;
+  }
+  .slider:before {
+    position: absolute; content: ""; height: 18px; width: 18px;
+    left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;
+  }
+  input:checked + .slider { background-color: #238636; }
+  input:checked + .slider:before { transform: translateX(20px); }
+
+  .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-primary {
+    flex: 1; padding: 12px; background: #238636; color: white;
+    border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer;
+  }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-secondary {
+    padding: 12px 18px; background: #21262d; color: #c9d1d9;
+    border: 1px solid #30363d; border-radius: 8px; font-size: 14px; cursor: pointer;
+  }
+  .btn-secondary:hover { background: #30363d; }
+
+  /* 진행도 및 터미널 모달 */
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .progress-title { font-size: 16px; font-weight: 600; color: #e6edf3; }
+  .progress-percent { font-size: 16px; font-weight: bold; color: #58a6ff; }
+  .progress-bar-bg { width: 100%; height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+  .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #238636, #2ea043); transition: width 0.3s ease; }
+  .toggle-log-btn { background: transparent; border: none; color: #8b949e; font-size: 12px; cursor: pointer; padding: 4px 0; }
+  .toggle-log-btn:hover { color: #58a6ff; }
+  #terminalContainer { display: none; margin-top: 12px; }
+  .terminal-box {
+    background: #000000; border: 1px solid #30363d; border-radius: 8px;
+    padding: 12px; height: 200px; overflow-y: auto; font-family: Consolas, 'Courier New', monospace;
+    font-size: 12px; color: #39ff14; line-height: 1.4; white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* 에러 오버레이 */
+  #errorOverlay {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6); z-index: 100; padding: 20px;
+  }
+  #errorContainer { width: 100%; max-width: 720px; height: 70%; background: transparent; border-radius: 12px; overflow: hidden; position: relative; }
+  #errorFrame { width: 100%; height: 100%; border: 0; background: transparent; }
+  .err-close { position: absolute; top: 10px; right: 10px; z-index: 5; background: rgba(0,0,0,0.6); color: #fff; border: 0; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -295,11 +414,29 @@
   <div id="albumPopup"><img /></div>
   <div id="bgArt"></div>
 
-  <a id="githubBtn" href="https://github.com/doctorheo/lyrics" target="_blank" rel="noopener" title="GitHub">
-    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
-      <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 018 4.58c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+  <!-- 우측 슬라이드 툴바 토글 버튼 (화살표) -->
+  <button id="toolbarToggleBtn" title="메뉴 열기">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"></polyline>
     </svg>
-  </a>
+  </button>
+
+  <!-- 우측 슬라이드 툴바 -->
+  <div id="sideToolbar">
+    <button class="toolbar-btn primary" id="openMp4ModalBtn">
+      🎬 MP4 비디오 변환
+    </button>
+    <button class="toolbar-btn" id="openSongModalBtn">
+      🎵 .song 패키지 생성
+    </button>
+    <a class="toolbar-btn" href="https://github.com/doctorheo/lyrics" target="_blank" rel="noopener">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 018 4.58c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+      </svg>
+      GitHub
+    </a>
+  </div>
+
   <div id="credit" aria-hidden="true"></div>
 
   <div id="container">
@@ -312,10 +449,91 @@
 
   <div id="controls">
     <audio id="audio" controls style="display:none"></audio>
-    <button id="exportBtn">⚡ 초고속 MP4 변환</button>
   </div>
 
-  <!-- 에러 창 -->
+  <!-- 1. MP4 변환 옵션 모달 -->
+  <div class="modal-backdrop" id="optionsModal">
+    <div class="modal-card">
+      <div class="modal-title">⚙️ MP4 변환 옵션 설정</div>
+      
+      <div class="form-group">
+        <label class="form-label">렌더링 모드</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="renderMode" value="classic">
+            클래식 모드
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="renderMode" value="new" checked>
+            신버전 모드
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">옵션</label>
+        <div class="switch-row">
+          <span class="switch-label">앨범아트 첨부</span>
+          <label class="switch">
+            <input type="checkbox" id="attachAlbumArt" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-secondary" id="cancelOptionBtn">취소</button>
+        <button class="btn-primary" id="startGenerateBtn">생성</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. .song 패키지 생성 모달 -->
+  <div class="modal-backdrop" id="createSongModal">
+    <div class="modal-card">
+      <div class="modal-title">🎵 .song 패키지 생성 (Whisper AI)</div>
+
+      <div class="form-group">
+        <label class="form-label">1. 음원 파일 선택 (*.mp3, *.wav, *.m4a, *.flac, *.mp4)</label>
+        <input type="file" id="songAudioFileInput" class="form-control" accept=".mp3,.wav,.m4a,.flac,.mp4">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">2. 전체 가사 입력 (줄바꿈 구분)</label>
+        <textarea id="songLyricsInput" class="form-control" placeholder="여기에 전체 가사를 복사해서 붙여넣어 주세요..."></textarea>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-secondary" id="cancelSongModalBtn">취소</button>
+        <button class="btn-primary" id="startCreateSongBtn">생성</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 진행도 및 터미널 팝업 모달 -->
+  <div class="modal-backdrop" id="progressOverlay">
+    <div class="modal-card">
+      <div class="progress-header">
+        <span class="progress-title" id="overlayTitle">⚡ 생성 작업 처리 중...</span>
+        <span class="progress-percent" id="progressPercent">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBarFill"></div>
+      </div>
+
+      <button class="toggle-log-btn" id="toggleLogBtn">▼ 자세히 보기 (로그)</button>
+
+      <div id="terminalContainer">
+        <pre class="terminal-box" id="terminalLog"></pre>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-secondary" id="closeOverlayBtn" style="display:none; width: 100%;">창 닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 에러 오버레이 -->
   <div id="errorOverlay">
     <div id="errorContainer">
       <button class="err-close" id="errCloseBtn">닫기</button>
@@ -337,7 +555,35 @@
     const songInput = document.getElementById("songInput");
     const bgArt = document.getElementById("bgArt");
     const creditEl = document.getElementById("credit");
-    const exportBtn = document.getElementById("exportBtn");
+
+    // 툴바 엘리먼트
+    const toolbarToggleBtn = document.getElementById("toolbarToggleBtn");
+    const sideToolbar = document.getElementById("sideToolbar");
+    const openMp4ModalBtn = document.getElementById("openMp4ModalBtn");
+    const openSongModalBtn = document.getElementById("openSongModalBtn");
+
+    // MP4 모달 엘리먼트
+    const optionsModal = document.getElementById("optionsModal");
+    const cancelOptionBtn = document.getElementById("cancelOptionBtn");
+    const startGenerateBtn = document.getElementById("startGenerateBtn");
+    const attachAlbumArt = document.getElementById("attachAlbumArt");
+
+    // .song 생성 모달 엘리먼트
+    const createSongModal = document.getElementById("createSongModal");
+    const cancelSongModalBtn = document.getElementById("cancelSongModalBtn");
+    const startCreateSongBtn = document.getElementById("startCreateSongBtn");
+    const songAudioFileInput = document.getElementById("songAudioFileInput");
+    const songLyricsInput = document.getElementById("songLyricsInput");
+
+    // 진행 오버레이 엘리먼트
+    const progressOverlay = document.getElementById("progressOverlay");
+    const progressBarFill = document.getElementById("progressBarFill");
+    const progressPercent = document.getElementById("progressPercent");
+    const overlayTitle = document.getElementById("overlayTitle");
+    const terminalLog = document.getElementById("terminalLog");
+    const terminalContainer = document.getElementById("terminalContainer");
+    const toggleLogBtn = document.getElementById("toggleLogBtn");
+    const closeOverlayBtn = document.getElementById("closeOverlayBtn");
 
     function parseLRC(text) {
       const lines = text.split(/\r?\n/);
@@ -365,6 +611,11 @@
       return augmented;
     }
 
+    function appendRawLog(rawText) {
+      terminalLog.textContent += rawText + "\n";
+      terminalLog.scrollTop = terminalLog.scrollHeight;
+    }
+
     function redirectToError(code, message, fileName) {
       const params = new URLSearchParams({ code: code || '', msg: message || '', file: fileName || '' });
       const overlay = document.getElementById('errorOverlay');
@@ -382,6 +633,12 @@
         window.location.href = 'error.html?' + params.toString();
       }
     }
+
+    // 툴바 토글 기능
+    toolbarToggleBtn.addEventListener("click", () => {
+      toolbarToggleBtn.classList.toggle("open");
+      sideToolbar.classList.toggle("open");
+    });
 
     songInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
@@ -460,13 +717,11 @@
         videoEl.style.display = "block";
         audioEl.style.display = "none";
         albumArtLarge.style.display = "none";
-        exportBtn.style.display = "none";
       } else {
         audioEl.src = URL.createObjectURL(mediaBlob);
         audioEl.style.display = "block";
         videoEl.style.display = "none";
         albumArtLarge.style.display = albumUrl ? "block" : "none";
-        exportBtn.style.display = "block";
       }
 
       if (!albumUrl && bgArt) bgArt.style.display = 'none';
@@ -529,41 +784,133 @@
       };
     }
 
-    /* ===== FastAPI 서버를 통한 초고속 MP4 변환 ===== */
-    exportBtn.addEventListener("click", async () => {
-      const file = songInput.files[0];
-      if (!file) return;
+    // 모달 여닫기 제어
+    openMp4ModalBtn.onclick = () => { optionsModal.style.display = "flex"; };
+    cancelOptionBtn.onclick = () => { optionsModal.style.display = "none"; };
 
-      exportBtn.disabled = true;
-      exportBtn.textContent = "⚡ 서버에서 변환 중...";
+    openSongModalBtn.onclick = () => { createSongModal.style.display = "flex"; };
+    cancelSongModalBtn.onclick = () => { createSongModal.style.display = "none"; };
+
+    toggleLogBtn.onclick = () => {
+      if (terminalContainer.style.display === "block") {
+        terminalContainer.style.display = "none";
+        toggleLogBtn.textContent = "▼ 자세히 보기 (로그)";
+      } else {
+        terminalContainer.style.display = "block";
+        toggleLogBtn.textContent = "▲ 자세히 보기 닫기";
+      }
+    };
+
+    closeOverlayBtn.onclick = () => { progressOverlay.style.display = "none"; };
+
+    // SSE 작업 파이프라인 함수
+    function runTaskPipeline(endpoint, formData, titleText) {
+      terminalLog.textContent = "";
+      progressBarFill.style.width = "0%";
+      progressPercent.textContent = "0%";
+      overlayTitle.textContent = titleText;
+      closeOverlayBtn.style.display = "none";
+      terminalContainer.style.display = "none";
+      toggleLogBtn.textContent = "▼ 자세히 보기 (로그)";
+      progressOverlay.style.display = "flex";
+
+      fetch(endpoint, { method: "POST", body: formData })
+        .then(res => {
+          if (!res.ok) throw new Error("서버 작업 요청 실패");
+          return res.json();
+        })
+        .then(data => {
+          const taskId = data.task_id;
+          const eventSource = new EventSource(`http://localhost:8000/stream_logs/${taskId}`);
+
+          eventSource.onmessage = (event) => {
+            const payload = JSON.parse(event.data);
+
+            if (payload.progress !== undefined) {
+              progressBarFill.style.width = `${payload.progress}%`;
+              progressPercent.textContent = `${payload.progress}%`;
+            }
+
+            if (payload.logs && payload.logs.length > 0) {
+              payload.logs.forEach(log => appendRawLog(log));
+            }
+
+            if (payload.status === "completed") {
+              eventSource.close();
+              overlayTitle.textContent = "🎉 생성 완료!";
+              closeOverlayBtn.style.display = "block";
+
+              const downloadUrl = `http://localhost:8000/download/${taskId}`;
+              const a = document.createElement("a");
+              a.href = downloadUrl;
+              a.click();
+            } else if (payload.status === "error") {
+              eventSource.close();
+              overlayTitle.textContent = "❌ 생성 실패";
+              closeOverlayBtn.style.display = "block";
+              alert(`처리 실패: ${payload.error}`);
+            }
+          };
+
+          eventSource.onerror = (err) => {
+            console.error("SSE 통신 에러:", err);
+            eventSource.close();
+            closeOverlayBtn.style.display = "block";
+          };
+        })
+        .catch(err => {
+          alert("서버 통신 에러 발생!");
+          console.error(err);
+          progressOverlay.style.display = "none";
+        });
+    }
+
+    // 1) MP4 비디오 생성 클릭
+    startGenerateBtn.addEventListener("click", () => {
+      const file = songInput.files[0];
+      if (!file) {
+        alert("플레이어에 먼저 노래 파일(.song 또는 .zip)을 로드해 주세요!");
+        return;
+      }
+
+      const selectedMode = document.querySelector('input[name="renderMode"]:checked').value;
+      const isAttachArt = attachAlbumArt.checked;
+
+      optionsModal.style.display = "none";
 
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("mode", selectedMode);
+      formData.append("attach_art", isAttachArt);
 
-      try {
-        const response = await fetch("http://localhost:8000/convert", {
-          method: "POST",
-          body: formData,
-        });
+      runTaskPipeline("http://localhost:8000/start_convert", formData, "⚡ MP4 비디오 변환 중...");
+    });
 
-        if (!response.ok) {
-          throw new Error("변환 서버 처리 실패");
-        }
+    // 2) .song 패키지 생성 클릭 (전부 입력 검증 포함)
+    startCreateSongBtn.addEventListener("click", () => {
+      const audioFile = songAudioFileInput.files[0];
+      const lyricsText = songLyricsInput.value.trim();
 
-        const blob = await response.blob();
-        const downloadUrl = URL.createObjectURL(blob);
-
-        const a = document.createElement("a");
-        a.href = downloadUrl;
-        a.download = `${file.name.replace(/\.[^/.]+$/, "")}.mp4`;
-        a.click();
-      } catch (err) {
-        alert("MP4 변환 서버와 통신 중 오류가 발생했습니다. (FastAPI 서버가 켜져 있는지 확인해 줘!)");
-        console.error(err);
-      } finally {
-        exportBtn.disabled = false;
-        exportBtn.textContent = "⚡ 초고속 MP4 변환";
+      // 전부 입력되지 않은 경우 차단
+      if (!audioFile) {
+        alert("음원 파일을 선택해 주세요!");
+        songAudioFileInput.focus();
+        return;
       }
+
+      if (!lyricsText) {
+        alert("전체 가사를 입력해 주세요!");
+        songLyricsInput.focus();
+        return;
+      }
+
+      createSongModal.style.display = "none";
+
+      const formData = new FormData();
+      formData.append("audio_file", audioFile);
+      formData.append("lyrics", lyricsText);
+
+      runTaskPipeline("http://localhost:8000/start_create_song", formData, "🎵 .song 패키지 분석 및 생성 중...");
     });
   </script>
 </body>
