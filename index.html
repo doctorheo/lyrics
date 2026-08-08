@@ -460,14 +460,14 @@
       <div class="modal-title">⚙️ MP4 변환 옵션 설정</div>
       
       <div class="form-group">
-        <label class="form-label">렌더링 모드</label>
+        <label class="form-label">렌더링 모드 선택</label>
         <div class="radio-group">
           <label class="radio-option">
             <input type="radio" name="renderMode" value="classic">
             클래식 모드
           </label>
           <label class="radio-option">
-            <input type="radio" name="renderMode" value="new" checked>
+            <input type="radio" name="renderMode" value="new">
             신버전 모드
           </label>
         </div>
@@ -613,6 +613,7 @@
     const cancelOptionBtn = document.getElementById("cancelOptionBtn");
     const startGenerateBtn = document.getElementById("startGenerateBtn");
     const attachAlbumArt = document.getElementById("attachAlbumArt");
+    const renderModeRadios = document.querySelectorAll('input[name="renderMode"]');
 
     // .song 생성 모달 엘리먼트
     const createSongModal = document.getElementById("createSongModal");
@@ -635,6 +636,15 @@
     const terminalContainer = document.getElementById("terminalContainer");
     const toggleLogBtn = document.getElementById("toggleLogBtn");
     const closeOverlayBtn = document.getElementById("closeOverlayBtn");
+
+    // MP4 모달 신버전 모드 선택 시 클릭 경고 이벤트 연결
+    renderModeRadios.forEach(radio => {
+      radio.addEventListener("change", (e) => {
+        if (e.target.value === "new" && apiBaseUrl === RENDER_URL) {
+          alert("⚠️ [경고] 클라우드(Render.com) 무료 서버 환경에서는 메모리 및 CPU 제한으로 인해 '신버전 모드' 변환 속도가 매우 느릴 수 있습니다.");
+        }
+      });
+    });
 
     function parseLRC(text) {
       const lines = text.split(/\r?\n/);
@@ -836,10 +846,21 @@
     }
 
     // 모달 여닫기 제어
-    openMp4ModalBtn.onclick = () => { optionsModal.style.display = "flex"; };
+    openMp4ModalBtn.onclick = () => { 
+      // 시작 시 라디오 버튼을 하나도 선택되지 않게 초기화
+      renderModeRadios.forEach(radio => radio.checked = false);
+      optionsModal.style.display = "flex"; 
+    };
     cancelOptionBtn.onclick = () => { optionsModal.style.display = "none"; };
 
-    openSongModalBtn.onclick = () => { createSongModal.style.display = "flex"; };
+    openSongModalBtn.onclick = () => { 
+      // Render.com 서버 환경일 때 .song 패키지 생성 시도 차단
+      if (apiBaseUrl === RENDER_URL) {
+        alert("🚫 [제한] Render.com 클라우드 서버 환경에서는 메모리 한계로 인해 .song 패키지 생성을 사용할 수 없습니다.\n로컬 서버(http://localhost:8000)를 이용해 주세요.");
+        return;
+      }
+      createSongModal.style.display = "flex"; 
+    };
     cancelSongModalBtn.onclick = () => { createSongModal.style.display = "none"; };
 
     openSettingsModalBtn.onclick = () => { settingsModal.style.display = "flex"; };
@@ -935,8 +956,22 @@
         return;
       }
 
-      const selectedMode = document.querySelector('input[name="renderMode"]:checked').value;
+      const selectedRadio = document.querySelector('input[name="renderMode"]:checked');
+      if (!selectedRadio) {
+        alert("렌더링 모드(클래식 모드 또는 신버전 모드)를 선택해 주세요!");
+        return;
+      }
+
+      const selectedMode = selectedRadio.value;
       const isAttachArt = attachAlbumArt.checked;
+
+      // 신버전 모드 선택 시 생성 버튼 클릭 시점에 추가 오버레이 확인창 표시
+      if (selectedMode === "new" && apiBaseUrl === RENDER_URL) {
+        const confirmResult = confirm("⚠️ [최종 확인]\n클라우드(Render.com) 서버 환경에서 신버전 모드는 변환 작업이 매우 오래 걸릴 수 있습니다.\n계속 진행하시겠습니까?");
+        if (!confirmResult) {
+          return;
+        }
+      }
 
       optionsModal.style.display = "none";
 
