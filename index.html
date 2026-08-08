@@ -599,7 +599,7 @@
     const isGitHubPages = window.location.hostname.endsWith("github.io");
 
     if (isGitHubPages) {
-      const serverNotice = "github.io 환경에서는 서버 기능(백엔드 API)을 사용할 수 없어.";
+      const serverNotice = "github.io 환경에서는 서버 기능(백엔드 API)을 사용할 수 없습니다.";
       
       openMp4ModalBtn.disabled = true;
       openMp4ModalBtn.classList.add("disabled");
@@ -812,7 +812,7 @@
     // 모달 여닫기 제어 (GitHub Pages 감지 시 동작 제한)
     openMp4ModalBtn.onclick = () => { 
       if (isGitHubPages) {
-        alert("github.io 환경에서는 서버(로컬 백엔드) 기능이 지원되지 않아.");
+        alert("github.io 환경에서는 서버(로컬 백엔드) 기능이 지원되지 않습니다.");
         return;
       }
       optionsModal.style.display = "flex"; 
@@ -821,7 +821,7 @@
 
     openSongModalBtn.onclick = () => { 
       if (isGitHubPages) {
-        alert("github.io 환경에서는 서버(로컬 백엔드) 기능이 지원되지 않아.");
+        alert("github.io 환경에서는 서버(로컬 백엔드) 기능이 지원되지 않습니다.");
         return;
       }
       createSongModal.style.display = "flex"; 
@@ -896,7 +896,7 @@
           };
         })
         .catch(err => {
-          alert("서버 통신 에러 발생!");
+          alert("서버 통신 에러가 발생했습니다.");
           console.error(err);
           progressOverlay.style.display = "none";
         });
