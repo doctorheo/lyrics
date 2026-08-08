@@ -246,7 +246,7 @@
     transition: background 0.2s, border-color 0.2s, color 0.2s;
     text-decoration: none;
   }
-  .toolbar-btn:hover:not(:disabled) {
+  .toolbar-btn:hover {
     background: #30363d;
     color: white;
     border-color: #8b949e;
@@ -256,17 +256,7 @@
     color: white;
     border: none;
   }
-  .toolbar-btn.primary:hover:not(:disabled) { background: #2ea043; }
-
-  /* 비활성화 버튼 스타일 */
-  .toolbar-btn:disabled,
-  .toolbar-btn.disabled {
-    opacity: 0.4;
-    cursor: not-allowed !important;
-    background: #21262d !important;
-    color: #8b949e !important;
-    border-color: #30363d !important;
-  }
+  .toolbar-btn.primary:hover { background: #2ea043; }
 
   #credit {
     position: fixed;
@@ -439,6 +429,9 @@
     <button class="toolbar-btn" id="openSongModalBtn">
       🎵 .song 패키지 생성
     </button>
+    <button class="toolbar-btn" id="openSettingsModalBtn" style="display: none;">
+      ⚙️ 서버 설정
+    </button>
     <a class="toolbar-btn" href="https://github.com/doctorheo/lyrics" target="_blank" rel="noopener">
       <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
         <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 018 4.58c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path>
@@ -520,7 +513,33 @@
     </div>
   </div>
 
-  <!-- 3. 진행도 및 터미널 팝업 모달 -->
+  <!-- 3. 서버 모드 설정 모달 -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-title">⚙️ 백엔드 서버 설정</div>
+
+      <div class="form-group">
+        <label class="form-label">통신할 백엔드 서버를 선택하세요</label>
+        <div class="radio-group" style="flex-direction: column;">
+          <label class="radio-option">
+            <input type="radio" name="serverMode" value="cloud" checked>
+            🌐 클라우드 서버 (Render)
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="serverMode" value="local">
+            💻 로컬 서버 (http://localhost:8000)
+          </label>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-secondary" id="cancelSettingsBtn">취소</button>
+        <button class="btn-primary" id="saveSettingsBtn">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 진행도 및 터미널 팝업 모달 -->
   <div class="modal-backdrop" id="progressOverlay">
     <div class="modal-card">
       <div class="progress-header">
@@ -553,6 +572,23 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script>
+    // ===== 서버 모드 및 API URL 관리 =====
+    const RENDER_URL = "https://lyrics-mk0x.onrender.com";
+    const LOCAL_URL = "http://localhost:8000";
+
+    const isGitHubPages = window.location.hostname.endsWith("github.io");
+    let apiBaseUrl = RENDER_URL;
+
+    // github.io가 아닐 때만 설정 버튼을 표시하고 저장된 모드를 로드
+    const openSettingsModalBtn = document.getElementById("openSettingsModalBtn");
+    if (!isGitHubPages) {
+      openSettingsModalBtn.style.display = "flex";
+      const savedMode = localStorage.getItem("serverMode") || "cloud";
+      apiBaseUrl = savedMode === "local" ? LOCAL_URL : RENDER_URL;
+      const radioBtn = document.querySelector(`input[name="serverMode"][value="${savedMode}"]`);
+      if (radioBtn) radioBtn.checked = true;
+    }
+
     let lrcData = [];
     let currentIndex = -1;
 
@@ -585,6 +621,11 @@
     const songAudioFileInput = document.getElementById("songAudioFileInput");
     const songLyricsInput = document.getElementById("songLyricsInput");
 
+    // 서버 설정 모달 엘리먼트
+    const settingsModal = document.getElementById("settingsModal");
+    const cancelSettingsBtn = document.getElementById("cancelSettingsBtn");
+    const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+
     // 진행 오버레이 엘리먼트
     const progressOverlay = document.getElementById("progressOverlay");
     const progressBarFill = document.getElementById("progressBarFill");
@@ -594,21 +635,6 @@
     const terminalContainer = document.getElementById("terminalContainer");
     const toggleLogBtn = document.getElementById("toggleLogBtn");
     const closeOverlayBtn = document.getElementById("closeOverlayBtn");
-
-    // ===== github.io 호스팅 검증 및 백엔드 기능 비활성화 로직 =====
-    const isGitHubPages = window.location.hostname.endsWith("github.io");
-
-    if (isGitHubPages) {
-      const serverNotice = "github.io 환경에서는 서버 기능(백엔드 API)을 사용할 수 없습니다.";
-      
-      openMp4ModalBtn.disabled = true;
-      openMp4ModalBtn.classList.add("disabled");
-      openMp4ModalBtn.title = serverNotice;
-
-      openSongModalBtn.disabled = true;
-      openSongModalBtn.classList.add("disabled");
-      openSongModalBtn.title = serverNotice;
-    }
 
     function parseLRC(text) {
       const lines = text.split(/\r?\n/);
@@ -809,24 +835,23 @@
       };
     }
 
-    // 모달 여닫기 제어 (GitHub Pages 감지 시 동작 제한)
-    openMp4ModalBtn.onclick = () => { 
-      if (isGitHubPages) {
-        alert("github.io 환경에서는 서버(로컬 백엔드) 기능이 지원되지 않습니다.");
-        return;
-      }
-      optionsModal.style.display = "flex"; 
-    };
+    // 모달 여닫기 제어
+    openMp4ModalBtn.onclick = () => { optionsModal.style.display = "flex"; };
     cancelOptionBtn.onclick = () => { optionsModal.style.display = "none"; };
 
-    openSongModalBtn.onclick = () => { 
-      if (isGitHubPages) {
-        alert("github.io 환경에서는 서버(로컬 백엔드) 기능이 지원되지 않습니다.");
-        return;
-      }
-      createSongModal.style.display = "flex"; 
-    };
+    openSongModalBtn.onclick = () => { createSongModal.style.display = "flex"; };
     cancelSongModalBtn.onclick = () => { createSongModal.style.display = "none"; };
+
+    openSettingsModalBtn.onclick = () => { settingsModal.style.display = "flex"; };
+    cancelSettingsBtn.onclick = () => { settingsModal.style.display = "none"; };
+
+    saveSettingsBtn.onclick = () => {
+      const selectedMode = document.querySelector('input[name="serverMode"]:checked').value;
+      localStorage.setItem("serverMode", selectedMode);
+      apiBaseUrl = selectedMode === "local" ? LOCAL_URL : RENDER_URL;
+      settingsModal.style.display = "none";
+      alert(`서버 설정이 [${selectedMode === "local" ? "로컬 모드" : "클라우드 모드"}]로 변경되었습니다.`);
+    };
 
     toggleLogBtn.onclick = () => {
       if (terminalContainer.style.display === "block") {
@@ -858,7 +883,7 @@
         })
         .then(data => {
           const taskId = data.task_id;
-          const eventSource = new EventSource(`http://localhost:8000/stream_logs/${taskId}`);
+          const eventSource = new EventSource(`${apiBaseUrl}/stream_logs/${taskId}`);
 
           eventSource.onmessage = (event) => {
             const payload = JSON.parse(event.data);
@@ -877,7 +902,7 @@
               overlayTitle.textContent = "🎉 생성 완료!";
               closeOverlayBtn.style.display = "block";
 
-              const downloadUrl = `http://localhost:8000/download/${taskId}`;
+              const downloadUrl = `${apiBaseUrl}/download/${taskId}`;
               const a = document.createElement("a");
               a.href = downloadUrl;
               a.click();
@@ -920,7 +945,7 @@
       formData.append("mode", selectedMode);
       formData.append("attach_art", isAttachArt);
 
-      runTaskPipeline("http://localhost:8000/start_convert", formData, "⚡ MP4 비디오 변환 중...");
+      runTaskPipeline(`${apiBaseUrl}/start_convert`, formData, "⚡ MP4 비디오 변환 중...");
     });
 
     // 2) .song 패키지 생성 클릭 (전부 입력 검증 포함)
@@ -947,7 +972,7 @@
       formData.append("audio_file", audioFile);
       formData.append("lyrics", lyricsText);
 
-      runTaskPipeline("http://localhost:8000/start_create_song", formData, "🎵 .song 패키지 분석 및 생성 중...");
+      runTaskPipeline(`${apiBaseUrl}/start_create_song`, formData, "🎵 .song 패키지 분석 및 생성 중...");
     });
   </script>
 </body>
