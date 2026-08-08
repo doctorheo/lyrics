@@ -5,3 +5,4 @@ pillow
 mutagen
 openai-whisper
 moviepy
+streamlit
