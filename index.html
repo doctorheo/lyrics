@@ -1,413 +1,601 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-<meta charset="UTF-8">
-<title>Lyrics Player & MP4 Generator</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    height: 100%;
-    background: transparent;
-    color: white;
-    font-family: "Segoe UI", sans-serif;
-    overflow: hidden;
-  }
+  <meta charset="UTF-8">
+  <title>Lyrics Player & MP4 Generator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  /* ===== 전체 구조 ===== */
-  #container {
-    display: flex;
-    height: 100%;
-    width: 100%;
-    position: relative;
-    z-index: 1;
-  }
+    html,
+    body {
+      height: 100%;
+      background: transparent;
+      color: white;
+      font-family: "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
 
-  #bgArt {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-size: cover;
-    background-position: center;
-    filter: blur(40px) brightness(0.35);
-    transform: scale(1.04);
-    z-index: 0;
-    display: none;
-  }
+    /* ===== 전체 구조 ===== */
+    #container {
+      display: flex;
+      height: 100%;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
 
-  /* ===== 비디오/이미지 영역 ===== */
-  #video-area {
-    flex: 0 0 55%;
-    background: rgba(0, 0, 0, 0);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
+    #bgArt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-size: cover;
+      background-position: center;
+      filter: blur(40px) brightness(0.35);
+      transform: scale(1.04);
+      z-index: 0;
+      display: none;
+    }
 
-  video, #albumArtLarge {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: transparent;
-  }
+    /* ===== 비디오/이미지 영역 ===== */
+    #video-area {
+      flex: 0 0 55%;
+      background: rgba(0, 0, 0, 0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
 
-  #albumArtLarge {
-    display: none;
-    border-radius: 0;
-  }
+    video,
+    #albumArtLarge {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: transparent;
+    }
 
-  /* ===== 가사 영역 ===== */
-  #lyrics-area {
-    flex: 1;
-    background: rgba(0,0,0,0.25);
-    padding: 60px 40px 80px;
-    overflow-y: auto;
-    scroll-behavior: smooth;
-  }
+    #albumArtLarge {
+      display: none;
+      border-radius: 0;
+    }
 
-  #lyrics-area::-webkit-scrollbar { width: 8px; }
-  #lyrics-area::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.3);
-    border-radius: 4px;
-  }
+    /* ===== 가사 영역 ===== */
+    #lyrics-area {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 60px 40px 80px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
 
-  .line {
-    opacity: 0.4;
-    font-size: 1.2em;
-    margin: 12px 0;
-    text-align: center;
-    transition: opacity 0.6s ease, font-size 0.4s ease;
-    color: rgba(255,255,255,0.95);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-    cursor: pointer;
-  }
+    #lyrics-area::-webkit-scrollbar {
+      width: 8px;
+    }
 
-  .active {
-    opacity: 1;
-    font-size: 1.9em;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 0 0 25px rgba(255,255,255,0.8);
-  }
+    #lyrics-area::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+    }
 
-  /* ===== 오른쪽 위 작은 앨범아트 ===== */
-  #albumArt {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    width: 100px;
-    height: 100px;
-    border-radius: 12px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.8);
-    object-fit: cover;
-    display: none;
-    cursor: pointer;
-    z-index: 10;
-  }
+    .line {
+      opacity: 0.4;
+      font-size: 1.2em;
+      margin: 12px 0;
+      text-align: center;
+      transition: opacity 0.6s ease, font-size 0.4s ease;
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      cursor: pointer;
+    }
 
-  #albumPopup {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.85);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 20;
-  }
-  #albumPopup img {
-    max-width: 80%;
-    max-height: 80%;
-    border-radius: 16px;
-  }
+    .active {
+      opacity: 1;
+      font-size: 1.9em;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 0 0 25px rgba(255, 255, 255, 0.8);
+    }
 
-  /* ===== 오디오 컨트롤 ===== */
-  #controls {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 55%;
-    background: transparent;
-    padding: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    z-index: 5;
-  }
+    /* ===== 오른쪽 위 작은 앨범아트 ===== */
+    #albumArt {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      width: 100px;
+      height: 100px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+      object-fit: cover;
+      display: none;
+      cursor: pointer;
+      z-index: 10;
+    }
 
-  audio { width: 70%; max-width: 500px; }
+    #albumPopup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 20;
+    }
 
-  /* ===== 파일 선택 ===== */
-  #songInput {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(1);
-    background: white;
-    color: black;
-    padding: 18px 26px;
-    border-radius: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    z-index: 40;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    transition: all 600ms ease;
-  }
+    #albumPopup img {
+      max-width: 80%;
+      max-height: 80%;
+      border-radius: 16px;
+    }
 
-  #songInput.compact {
-    top: 15px;
-    left: 15px;
-    transform: translate(0, 0) scale(1);
-    padding: 6px 10px;
-    border-radius: 6px;
-    width: auto;
-    box-shadow: none;
-    z-index: 50;
-  }
+    /* ===== 오디오 컨트롤 ===== */
+    #controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 55%;
+      background: transparent;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 5;
+    }
 
-  body:not(.show-ui) #container,
-  body:not(.show-ui) #albumArt,
-  body:not(.show-ui) #controls,
-  body:not(.show-ui) #bgArt,
-  body:not(.show-ui) #albumPopup {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(8px) scale(0.995);
-    transition: opacity 600ms ease, transform 600ms ease;
-  }
+    audio {
+      width: 70%;
+      max-width: 500px;
+    }
 
-  body.show-ui #container,
-  body.show-ui #albumArt,
-  body.show-ui #controls,
-  body.show-ui #bgArt,
-  body.show-ui #albumPopup {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0) scale(1);
-  }
+    /* ===== 파일 선택 ===== */
+    #songInput {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      background: white;
+      color: black;
+      padding: 18px 26px;
+      border-radius: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 40;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: all 600ms ease;
+    }
 
-  /* ===== 우측 슬라이드 툴바 및 토글 화살표 버튼 ===== */
-  #toolbarToggleBtn {
-    position: fixed;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,0.1);
-    color: white;
-    border-radius: 10px;
-    z-index: 120;
-    cursor: pointer;
-    transition: background 0.2s, right 0.3s ease, transform 0.3s ease;
-    border: 1px solid rgba(255,255,255,0.15);
-  }
-  #toolbarToggleBtn:hover { background: rgba(255,255,255,0.2); }
-  #toolbarToggleBtn.open {
-    right: 225px;
-    transform: translateY(-50%) rotate(180deg);
-  }
+    #songInput.compact {
+      top: 15px;
+      left: 15px;
+      transform: translate(0, 0) scale(1);
+      padding: 6px 10px;
+      border-radius: 6px;
+      width: auto;
+      box-shadow: none;
+      z-index: 50;
+    }
 
-  #sideToolbar {
-    position: fixed;
-    top: 0;
-    right: -260px;
-    width: 250px;
-    height: 100%;
-    background: #161b22;
-    border-left: 1px solid #30363d;
-    z-index: 110;
-    padding: 80px 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    transition: right 0.3s ease;
-    box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-  }
-  #sideToolbar.open { right: 0; }
+    body:not(.show-ui) #container,
+    body:not(.show-ui) #albumArt,
+    body:not(.show-ui) #controls,
+    body:not(.show-ui) #bgArt,
+    body:not(.show-ui) #albumPopup {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px) scale(0.995);
+      transition: opacity 600ms ease, transform 600ms ease;
+    }
 
-  .toolbar-btn {
-    width: 100%;
-    padding: 12px;
-    background: #21262d;
-    color: #c9d1d9;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 13px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: background 0.2s, border-color 0.2s, color 0.2s;
-    text-decoration: none;
-  }
-  .toolbar-btn:hover {
-    background: #30363d;
-    color: white;
-    border-color: #8b949e;
-  }
-  .toolbar-btn.primary {
-    background: #238636;
-    color: white;
-    border: none;
-  }
-  .toolbar-btn.primary:hover { background: #2ea043; }
+    body.show-ui #container,
+    body.show-ui #albumArt,
+    body.show-ui #controls,
+    body.show-ui #bgArt,
+    body.show-ui #albumPopup {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
 
-  #credit {
-    position: fixed;
-    right: 15px;
-    bottom: 15px;
-    background: rgba(0,0,0,0.5);
-    color: rgba(255,255,255,0.95);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    line-height: 1.3;
-    max-width: 320px;
-    z-index: 45;
-    display: none;
-    white-space: pre-wrap;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-    transition: opacity 400ms ease, transform 400ms ease;
-  }
-  #credit.visible { display: block; opacity: 1; transform: translateY(0); }
+    /* ===== 우측 슬라이드 툴바 및 토글 화살표 버튼 (초기 상태에서도 명확히 표시) ===== */
+    #toolbarToggleBtn {
+      position: fixed;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #21262d;
+      color: white;
+      border-radius: 10px;
+      z-index: 120;
+      cursor: pointer;
+      transition: background 0.2s, right 0.3s ease, transform 0.3s ease, border-color 0.2s;
+      border: 1px solid #30363d;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
 
-  /* ===== 모달 백드롭 및 카드 ===== */
-  .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(6px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
+    #toolbarToggleBtn:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
 
-  .modal-card {
-    width: 90%;
-    max-width: 500px;
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 14px;
-    padding: 24px;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
-  }
+    #toolbarToggleBtn.open {
+      right: 225px;
+      transform: translateY(-50%) rotate(180deg);
+    }
 
-  .modal-title {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 16px;
-    color: #f0f6fc;
-  }
+    #sideToolbar {
+      position: fixed;
+      top: 0;
+      right: -260px;
+      width: 250px;
+      height: 100%;
+      background: #161b22;
+      border-left: 1px solid #30363d;
+      z-index: 110;
+      padding: 80px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: right 0.3s ease;
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    }
 
-  .form-group {
-    margin-bottom: 16px;
-  }
+    #sideToolbar.open {
+      right: 0;
+    }
 
-  .form-label {
-    display: block;
-    font-size: 13px;
-    color: #8b949e;
-    margin-bottom: 8px;
-    font-weight: 600;
-  }
+    .toolbar-btn {
+      width: 100%;
+      padding: 12px;
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      text-decoration: none;
+    }
 
-  .form-control {
-    width: 100%;
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 8px;
-    color: white;
-    padding: 10px;
-    font-size: 13px;
-    font-family: inherit;
-  }
+    .toolbar-btn:hover {
+      background: #30363d;
+      color: white;
+      border-color: #8b949e;
+    }
 
-  textarea.form-control {
-    height: 160px;
-    resize: vertical;
-  }
+    .toolbar-btn.primary {
+      background: #238636;
+      color: white;
+      border: none;
+    }
 
-  .radio-group { display: flex; gap: 12px; }
-  .radio-option {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #21262d;
-    border: 1px solid #30363d;
-    padding: 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .radio-option input[type="radio"] { accent-color: #238636; }
+    .toolbar-btn.primary:hover {
+      background: #2ea043;
+    }
 
-  .switch-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #21262d;
-    border: 1px solid #30363d;
-    padding: 12px 16px;
-    border-radius: 8px;
-  }
-  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .slider {
-    position: absolute; cursor: pointer; inset: 0;
-    background-color: #30363d; transition: .3s; border-radius: 24px;
-  }
-  .slider:before {
-    position: absolute; content: ""; height: 18px; width: 18px;
-    left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;
-  }
-  input:checked + .slider { background-color: #238636; }
-  input:checked + .slider:before { transform: translateX(20px); }
+    #credit {
+      position: fixed;
+      right: 15px;
+      bottom: 15px;
+      background: rgba(0, 0, 0, 0.5);
+      color: rgba(255, 255, 255, 0.95);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.3;
+      max-width: 320px;
+      z-index: 45;
+      display: none;
+      white-space: pre-wrap;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+      transition: opacity 400ms ease, transform 400ms ease;
+    }
 
-  .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-  .btn-primary {
-    flex: 1; padding: 12px; background: #238636; color: white;
-    border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer;
-  }
-  .btn-primary:hover { background: #2ea043; }
-  .btn-secondary {
-    padding: 12px 18px; background: #21262d; color: #c9d1d9;
-    border: 1px solid #30363d; border-radius: 8px; font-size: 14px; cursor: pointer;
-  }
-  .btn-secondary:hover { background: #30363d; }
+    #credit.visible {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
 
-  /* 진행도 및 터미널 모달 */
-  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .progress-title { font-size: 16px; font-weight: 600; color: #e6edf3; }
-  .progress-percent { font-size: 16px; font-weight: bold; color: #58a6ff; }
-  .progress-bar-bg { width: 100%; height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
-  .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #238636, #2ea043); transition: width 0.3s ease; }
-  .toggle-log-btn { background: transparent; border: none; color: #8b949e; font-size: 12px; cursor: pointer; padding: 4px 0; }
-  .toggle-log-btn:hover { color: #58a6ff; }
-  #terminalContainer { display: none; margin-top: 12px; }
-  .terminal-box {
-    background: #000000; border: 1px solid #30363d; border-radius: 8px;
-    padding: 12px; height: 200px; overflow-y: auto; font-family: Consolas, 'Courier New', monospace;
-    font-size: 12px; color: #39ff14; line-height: 1.4; white-space: pre-wrap; word-break: break-all;
-  }
+    /* ===== 모달 백드롭 및 카드 ===== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
 
-  /* 에러 오버레이 */
-  #errorOverlay {
-    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.6); z-index: 100; padding: 20px;
-  }
-  #errorContainer { width: 100%; max-width: 720px; height: 70%; background: transparent; border-radius: 12px; overflow: hidden; position: relative; }
-  #errorFrame { width: 100%; height: 100%; border: 0; background: transparent; }
-  .err-close { position: absolute; top: 10px; right: 10px; z-index: 5; background: rgba(0,0,0,0.6); color: #fff; border: 0; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
-</style>
+    .modal-card {
+      width: 90%;
+      max-width: 500px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 16px;
+      color: #f0f6fc;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      color: #8b949e;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .form-control {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: white;
+      padding: 10px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    textarea.form-control {
+      height: 160px;
+      resize: vertical;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .radio-option {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .radio-option input[type="radio"] {
+      accent-color: #238636;
+    }
+
+    .switch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #21262d;
+      border: 1px solid #30363d;
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #30363d;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: #238636;
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(20px);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 12px;
+      background: #238636;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: #2ea043;
+    }
+
+    .btn-secondary {
+      padding: 12px 18px;
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: #30363d;
+    }
+
+    /* 진행도 및 터미널 모달 */
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #e6edf3;
+    }
+
+    .progress-percent {
+      font-size: 16px;
+      font-weight: bold;
+      color: #58a6ff;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 12px;
+      background: #21262d;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #238636, #2ea043);
+      transition: width 0.3s ease;
+    }
+
+    .toggle-log-btn {
+      background: transparent;
+      border: none;
+      color: #8b949e;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .toggle-log-btn:hover {
+      color: #58a6ff;
+    }
+
+    #terminalContainer {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .terminal-box {
+      background: #000000;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 12px;
+      color: #39ff14;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* 에러 오버레이 */
+    #errorOverlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      padding: 20px;
+    }
+
+    #errorContainer {
+      width: 100%;
+      max-width: 720px;
+      height: 70%;
+      background: transparent;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #errorFrame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: transparent;
+    }
+
+    .err-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 5;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: 0;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
 </head>
+
 <body>
   <input type="file" id="songInput" accept=".music,.song,.zip">
   <img id="albumArt" />
@@ -416,7 +604,8 @@
 
   <!-- 우측 슬라이드 툴바 토글 버튼 (화살표) -->
   <button id="toolbarToggleBtn" title="메뉴 열기">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 18 9 12 15 6"></polyline>
     </svg>
   </button>
@@ -434,7 +623,9 @@
     </button>
     <a class="toolbar-btn" href="https://github.com/doctorheo/lyrics" target="_blank" rel="noopener">
       <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
-        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 018 4.58c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+        <path fill-rule="evenodd"
+          d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2 .37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 018 4.58c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z">
+        </path>
       </svg>
       GitHub
     </a>
@@ -458,7 +649,7 @@
   <div class="modal-backdrop" id="optionsModal">
     <div class="modal-card">
       <div class="modal-title">⚙️ MP4 변환 옵션 설정</div>
-      
+
       <div class="form-group">
         <label class="form-label">렌더링 모드 선택</label>
         <div class="radio-group">
@@ -758,10 +949,10 @@
       if (creditText && creditEl) {
         creditEl.textContent = creditText.trim();
         creditEl.classList.add('visible');
-        creditEl.setAttribute('aria-hidden','false');
+        creditEl.setAttribute('aria-hidden', 'false');
       } else if (creditEl) {
         creditEl.classList.remove('visible');
-        creditEl.setAttribute('aria-hidden','true');
+        creditEl.setAttribute('aria-hidden', 'true');
         creditEl.style.display = 'none';
       }
 
@@ -846,20 +1037,20 @@
     }
 
     // 모달 여닫기 제어
-    openMp4ModalBtn.onclick = () => { 
+    openMp4ModalBtn.onclick = () => {
       // 시작 시 라디오 버튼을 하나도 선택되지 않게 초기화
       renderModeRadios.forEach(radio => radio.checked = false);
-      optionsModal.style.display = "flex"; 
+      optionsModal.style.display = "flex";
     };
     cancelOptionBtn.onclick = () => { optionsModal.style.display = "none"; };
 
-    openSongModalBtn.onclick = () => { 
+    openSongModalBtn.onclick = () => {
       // Render.com 서버 환경일 때 .song 패키지 생성 시도 차단
       if (apiBaseUrl === RENDER_URL) {
         alert("🚫 [제한] Render.com 클라우드 서버 환경에서는 메모리 한계로 인해 .song 패키지 생성을 사용할 수 없습니다.\n로컬 서버(http://localhost:8000)를 이용해 주세요.");
         return;
       }
-      createSongModal.style.display = "flex"; 
+      createSongModal.style.display = "flex";
     };
     cancelSongModalBtn.onclick = () => { createSongModal.style.display = "none"; };
 
@@ -1011,4 +1202,5 @@
     });
   </script>
 </body>
+
 </html>
