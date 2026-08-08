@@ -9,6 +9,7 @@ import subprocess
 import threading
 import warnings
 import zipfile
+import urllib.request
 from typing import List, Tuple, Dict, Any
 from difflib import SequenceMatcher
 
@@ -34,6 +35,32 @@ app.add_middleware(
 )
 
 tasks: Dict[str, Dict[str, Any]] = {}
+
+# ==========================================
+# 0. 한글 폰트 자동 다운로드 및 확보
+# ==========================================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FONT_REG_PATH = os.path.join(BASE_DIR, "NanumGothic.ttf")
+FONT_BOLD_PATH = os.path.join(BASE_DIR, "NanumGothicBold.ttf")
+
+def ensure_fonts_exist():
+    """Render 등 리눅스 환경에서 한글 폰트가 없을 때 자동으로 다운로드"""
+    fonts_to_download = [
+        (FONT_REG_PATH, "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"),
+        (FONT_BOLD_PATH, "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Bold.ttf")
+    ]
+    for path, url in fonts_to_download:
+        if not os.path.exists(path):
+            try:
+                print(f"[FONT] 한글 폰트 다운로드 중: {os.path.basename(path)}...")
+                urllib.request.urlretrieve(url, path)
+                print(f"[FONT] 다운로드 완료: {path}")
+            except Exception as e:
+                print(f"[FONT] 폰트 다운로드 실패: {e}")
+
+# 서버 시작 시 폰트 자동 확보
+ensure_fonts_exist()
+
 
 def remove_dir(path: str):
     """임시 디렉토리 삭제"""
@@ -396,9 +423,16 @@ def render_frame(width: int, height: int, album_img: Image.Image, lrc_data: List
             active_idx = i
             break
 
+    # 폰트 로딩 예외 처리 (한글 폰트 적용)
+    active_size = 30 if mode == "classic" else 32
+    sub_size = 20 if mode == "classic" else 22
     try:
-        font_active = ImageFont.truetype("malgunbd.ttf", 30) if mode == "classic" else ImageFont.truetype("malgunbd.ttf", 32)
-        font_sub = ImageFont.truetype("malgun.ttf", 20) if mode == "classic" else ImageFont.truetype("malgun.ttf", 22)
+        if os.path.exists(FONT_BOLD_PATH) and os.path.exists(FONT_REG_PATH):
+            font_active = ImageFont.truetype(FONT_BOLD_PATH, active_size)
+            font_sub = ImageFont.truetype(FONT_REG_PATH, sub_size)
+        else:
+            font_active = ImageFont.truetype("malgunbd.ttf", active_size)
+            font_sub = ImageFont.truetype("malgun.ttf", sub_size)
     except Exception:
         font_active = ImageFont.load_default()
         font_sub = ImageFont.load_default()
